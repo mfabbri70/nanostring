@@ -1,0 +1,63 @@
+#miRNA predicted conserved targets using targetscan in Human (it can also be done in Mouse).
+
+myMir <- "hsa-mir-17"
+
+# 1. to find targets we need to use the mature form of the mirna
+# we can do this using 'mirbase.db'
+
+require("mirbase.db") || stop("Could not load package 'mirbase.db'")
+
+## inspect the mature forms for this particular miRNA
+print(get(myMir, mirbaseMATURE))
+##Accession: MIMAT0000070
+##  ID: hsa-miR-17
+##  Start: 14
+##  End: 36
+##  Evidence: experimental
+##  Experiment: cloned [2,5-8], Northern [4]
+##
+##Accession: MIMAT0000071
+##  ID: hsa-miR-17*
+##  Start: 51
+##  End: 72
+##  Evidence: experimental
+##  Experiment: cloned [1,5,7-8], Northern [1]
+
+## select the first one
+myMature <- matureName(get(myMir, mirbaseMATURE))[1]
+
+# 2. find the targets of this mature mirna using targetscan
+
+require("targetscan.Hs.eg.db") || stop("Could not load package",
+                                      "'targetscan.Hs.eg.db'")
+
+## get the seed-based family associated with this mature mirna
+myMirFam <- get(myMature, targetscan.Hs.egMIRBASE2FAMILY)
+
+## retrieve targets (as NCBI Gene IDs)
+myMirTargets <- get(myMirFam, revmap(targetscan.Hs.egTARGETS))
+
+##length(myMirTargets)
+##[1] 1114
+
+## 3. map target genes to KEGG pathways
+require("org.Hs.eg.db") || stop("Could not load package",
+                               "'org.Hs.eg.db'.")
+
+myMirTargetsKegg <- mget(myMirTargets, org.Hs.egPATH)
+##sum(!is.na(myMirTargetsKegg))
+##[1] 315
+
+## optional for convenience, add KEGG pathway names
+require("KEGG.db") || stop("Could not load package 'KEGG.db'")
+
+## using only the entries with a KEGG id
+myMirTargetsKeggNames <- lapply(myMirTargetsKegg[!is.na(myMirTargetsKegg)],
+                               function(i) mget(i, KEGGPATHID2NAME))
+
+
+#Note that since KEGG is no longer public and that the BioConductor package will soon be considered deprecated you could use the 'reactome.db' package instead for mapping pathways. Just replace the step 3. above by a call to:
+
+mget(myMirTargets, reactomeEXTID2PATHID, ifnotfound=NA)
+
+#I'll leave finding the pathway names as an exercise ;-)
